@@ -39,7 +39,7 @@ def _get_base_ydl_opts(skip_download=False):
     # Add cookies file if it exists
     if COOKIES_FILE.exists():
         opts["cookiefile"] = str(COOKIES_FILE)
-    else:
+    elif not os.getenv("VERCEL"):
         # Try to use cookies from Chrome/Edge browser automatically
         try:
             opts["cookiesfrombrowser"] = "chrome"
