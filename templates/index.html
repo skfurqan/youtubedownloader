@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VORTEX | YouTube Downloader</title>
+  <style>
+    :root {
+      --bg-0: #05070d;
+      --bg-1: #0a101a;
+      --bg-2: #101725;
+      --line: #1f2a3f;
+      --text: #eaf2ff;
+      --muted: #8ea3c7;
+      --ok: #54e38e;
+      --warn: #f9ca5b;
+      --accent: #5ad7ff;
+      --accent-2: #2f9cf5;
+      --danger: #ff5f6d;
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "JetBrains Mono", "Fira Code", monospace;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 90% -10%, rgba(90, 215, 255, 0.12), transparent 60%),
+        radial-gradient(1000px 700px at -10% 120%, rgba(47, 156, 245, 0.15), transparent 55%),
+        linear-gradient(180deg, var(--bg-0), var(--bg-1) 40%, var(--bg-0));
+      overflow-x: hidden;
+    }
+
+    .wrap {
+      width: min(960px, 92vw);
+      margin: 2.5rem auto 3rem;
+      animation: rise 600ms ease-out;
+    }
+
+    .title {
+      margin: 0 0 .35rem;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      letter-spacing: 0.16em;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      margin: 0 0 1.4rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(16, 23, 37, 0.88), rgba(10, 16, 26, 0.9));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 10px 30px var(--shadow);
+      margin-bottom: 1rem;
+      backdrop-filter: blur(4px);
+      animation: rise 700ms ease both;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 0.6rem;
+    }
+
+    input[type="url"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #0d1522;
+      color: var(--text);
+      padding: 0.85rem 0.95rem;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    input[type="url"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(90, 215, 255, 0.18);
+    }
+
+    button {
+      border: 1px solid #2a3958;
+      background: linear-gradient(180deg, #1b2a45, #13213a);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: transform 120ms ease, border-color 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); border-color: var(--accent); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .primary {
+      background: linear-gradient(180deg, #0f4f66, #0a394e);
+      border-color: #2f6e86;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #121a29;
+    }
+
+    .meta h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.08rem;
+      line-height: 1.35;
+    }
+
+    .small { color: var(--muted); font-size: 0.9rem; }
+
+    .quality-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.8rem;
+    }
+
+    .q-btn.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(90, 215, 255, 0.2);
+      background: linear-gradient(180deg, #165b76, #10455c);
+    }
+
+    .playlist {
+      max-height: 240px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin-top: 0.9rem;
+      background: rgba(6, 10, 16, 0.5);
+    }
+
+    .playlist-item {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #1a263a;
+      color: #d7e6ff;
+      font-size: 0.88rem;
+    }
+
+    .playlist-item:last-child { border-bottom: none; }
+
+    .progress-shell {
+      width: 100%;
+      height: 14px;
+      border-radius: 999px;
+      background: #0d1522;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      margin: 0.5rem 0 0.45rem;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 260ms ease;
+    }
+
+    .row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .downloads-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .downloads-list li {
+      border-bottom: 1px solid #1a263a;
+      padding: 0.65rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    .downloads-list li:last-child { border-bottom: none; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .status-ok { color: var(--ok); }
+    .status-error { color: var(--danger); }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(90, 215, 255, 0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 600ms linear infinite;
+      margin-right: 0.4rem;
+    }
+
+    @media (max-width: 760px) {
+      .input-row { grid-template-columns: 1fr; }
+      .meta { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1 class="title">VORTEX</h1>
+    <p class="subtitle">YouTube downloader • Flask + yt-dlp</p>
+
+    <section class="panel">
+      <div class="input-row">
+        <input id="urlInput" type="url" placeholder="Paste YouTube URL (video or playlist)" />
+        <button id="fetchBtn" class="primary">FETCH</button>
+        <button id="downloadBtn" disabled>DOWNLOAD</button>
+        <button id="directDownloadBtn" disabled>DIRECT DOWNLOAD</button>
+      </div>
+      <p id="message" class="small"></p>
+    </section>
+
+    <section class="panel" id="metaPanel" style="display:none;">
+      <div class="meta">
+        <img id="thumb" class="thumb" alt="thumbnail" />
+        <div>
+          <h2 id="title">-</h2>
+          <div class="small" id="uploader"></div>
+          <div class="small" id="duration"></div>
+          <div class="quality-grid" id="qualityGrid"></div>
+        </div>
+      </div>
+      <div id="playlistBlock" class="playlist" style="display:none;"></div>
+    </section>
+
+    <section class="panel" id="progressPanel" style="display:none;">
+      <div id="statusText" class="small">Waiting...</div>
+      <div class="progress-shell"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="row">
+        <span id="percent">0%</span>
+        <span id="speed">speed: -</span>
+        <span id="eta">eta: -</span>
+      </div>
+      <div class="small" id="fileLink"></div>
+    </section>
+
+    <section class="panel">
+      <h3 style="margin-top:0;">Downloaded Files</h3>
+      <ul class="downloads-list" id="downloadsList"></ul>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      url: "",
+      selectedQuality: "best",
+      currentJobId: null,
+      source: null,
+    };
+
+    const urlInput = document.getElementById("urlInput");
+    const fetchBtn = document.getElementById("fetchBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const directDownloadBtn = document.getElementById("directDownloadBtn");
+    const messageEl = document.getElementById("message");
+
+    const metaPanel = document.getElementById("metaPanel");
+    const thumbEl = document.getElementById("thumb");
+    const titleEl = document.getElementById("title");
+    const uploaderEl = document.getElementById("uploader");
+    const durationEl = document.getElementById("duration");
+    const qualityGrid = document.getElementById("qualityGrid");
+    const playlistBlock = document.getElementById("playlistBlock");
+
+    const progressPanel = document.getElementById("progressPanel");
+    const statusText = document.getElementById("statusText");
+    const progressBar = document.getElementById("progressBar");
+    const percentEl = document.getElementById("percent");
+    const speedEl = document.getElementById("speed");
+    const etaEl = document.getElementById("eta");
+    const fileLinkEl = document.getElementById("fileLink");
+
+    const downloadsList = document.getElementById("downloadsList");
+
+    function setMessage(text, isError = false) {
+      messageEl.textContent = text;
+      messageEl.className = isError ? "small status-error" : "small";
+    }
+
+    function formatDuration(seconds) {
+      if (seconds == null) return "";
+      const s = Number(seconds);
+      if (!Number.isFinite(s)) return "";
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = Math.floor(s % 60);
+      return h > 0
+        ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
+        : `${m}:${String(sec).padStart(2, "0")}`;
+    }
+
+    function setQualities(qualities = []) {
+      qualityGrid.innerHTML = "";
+      const values = ["best", ...qualities.map(q => String(q))];
+      values.forEach(value => {
+        const btn = document.createElement("button");
+        btn.className = "q-btn";
+        btn.type = "button";
+        btn.textContent = value === "best" ? "best" : `${value}p`;
+        if (value === state.selectedQuality) btn.classList.add("active");
+        btn.addEventListener("click", () => {
+          state.selectedQuality = value;
+          [...qualityGrid.querySelectorAll(".q-btn")].forEach(x => x.classList.remove("active"));
+          btn.classList.add("active");
+        });
+        qualityGrid.appendChild(btn);
+      });
+    }
+
+    function renderPlaylist(entries = []) {
+      if (!entries.length) {
+        playlistBlock.style.display = "none";
+        playlistBlock.innerHTML = "";
+        return;
+      }
+      playlistBlock.style.display = "block";
+      playlistBlock.innerHTML = entries
+        .map((entry, idx) => `<div class="playlist-item">${idx + 1}. ${entry.title || "Untitled"}</div>`)
+        .join("");
+    }
+
+    async function fetchInfo() {
+      const url = urlInput.value.trim();
+      if (!url) {
+        setMessage("Please enter a URL", true);
+        return;
+      }
+
+      fetchBtn.disabled = true;
+      downloadBtn.disabled = true;
+      setMessage("Fetching metadata...");
+
+      try {
+        const res = await fetch("/api/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch info");
+
+        state.url = url;
+        state.selectedQuality = "best";
+
+        metaPanel.style.display = "block";
+        titleEl.textContent = data.title || "Unknown title";
+        uploaderEl.textContent = data.uploader ? `uploader: ${data.uploader}` : "";
+        durationEl.textContent = data.duration != null ? `duration: ${formatDuration(data.duration)}` : "";
+        thumbEl.src = data.thumbnail || "";
+        thumbEl.style.visibility = data.thumbnail ? "visible" : "hidden";
+
+        if (data.type === "playlist") {
+          durationEl.textContent = `playlist items: ${data.count || 0}`;
+          renderPlaylist(data.entries || []);
+        } else {
+          renderPlaylist([]);
+        }
+
+        setQualities(data.qualities || []);
+        downloadBtn.disabled = false;
+        directDownloadBtn.disabled = false;
+        setMessage("Metadata loaded.");
+      } catch (err) {
+        setMessage(err.message || "Could not fetch metadata", true);
+      } finally {
+        fetchBtn.disabled = false;
+      }
+    }
+
+    function closeStream() {
+      if (state.source) {
+        state.source.close();
+        state.source = null;
+      }
+    }
+
+    function startProgress(jobId) {
+      closeStream();
+      progressPanel.style.display = "block";
+      progressBar.style.width = "0%";
+      percentEl.textContent = "0%";
+      speedEl.textContent = "speed: -";
+      etaEl.textContent = "eta: -";
+      fileLinkEl.innerHTML = "";
+
+      const source = new EventSource(`/api/progress/${jobId}`);
+      state.source = source;
+
+      source.onmessage = (event) => {
+        let data;
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+
+        const pct = Number(data.percent || 0);
+        progressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+        percentEl.textContent = `${pct.toFixed(1)}%`;
+        speedEl.textContent = `speed: ${data.speed || "-"}`;
+        etaEl.textContent = `eta: ${data.eta || "-"}`;
+
+        if (data.status === "done") {
+          statusText.textContent = "Download complete";
+          statusText.className = "small status-ok";
+          fileLinkEl.innerHTML = `<a href="/api/file/${jobId}">Download file</a>`;
+          closeStream();
+          refreshDownloads();
+          return;
+        }
+
+        if (data.status === "error") {
+          statusText.textContent = `Error: ${data.error || "unknown"}`;
+          statusText.className = "small status-error";
+          closeStream();
+          return;
+        }
+
+        statusText.textContent = `Status: ${data.status || "working"}`;
+        statusText.className = "small";
+      };
+
+      source.onerror = () => {
+        statusText.textContent = "Progress stream interrupted";
+        statusText.className = "small status-error";
+      };
+    }
+
+    async function startDownload() {
+      if (!state.url) {
+        setMessage("Fetch metadata first", true);
+        return;
+      }
+
+      downloadBtn.disabled = true;
+      setMessage("Starting download job...");
+
+      try {
+        const res = await fetch("/api/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: state.url, quality: state.selectedQuality })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Could not start download");
+
+        state.currentJobId = data.job_id;
+        setMessage(`Job started: ${data.job_id}`);
+        startProgress(data.job_id);
+      } catch (err) {
+        setMessage(err.message || "Download failed to start", true);
+      } finally {
+        downloadBtn.disabled = false;
+      }
+    }
+
+    async function startDirectDownload() {
+      if (!state.url) {
+        setMessage("Fetch metadata first", true);
+        return;
+      }
+
+      directDownloadBtn.disabled = true;
+      const originalText = directDownloadBtn.textContent;
+      directDownloadBtn.innerHTML = `<span class="spinner"></span>Loading...`;
+
+      try {
+        const res = await fetch("/api/download-direct", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: state.url, quality: state.selectedQuality })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Download failed");
+        }
+
+        const blob = await res.blob();
+        
+        // Extract filename from Content-Disposition header or generate one
+        const contentDisposition = res.headers.get("content-disposition");
+        let filename = "download";
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (match) filename = match[1];
+        }
+
+        // Create blob download
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+
+        setMessage("Download complete!");
+        refreshDownloads();
+      } catch (err) {
+        setMessage(err.message || "Direct download failed", true);
+      } finally {
+        directDownloadBtn.disabled = false;
+        directDownloadBtn.textContent = originalText;
+      }
+    }
+
+    async function refreshDownloads() {
+      try {
+        const res = await fetch("/api/downloads");
+        const data = await res.json();
+        const files = data.files || [];
+        if (!files.length) {
+          downloadsList.innerHTML = `<li><span class="small">No files yet</span></li>`;
+          return;
+        }
+        downloadsList.innerHTML = files.map(file =>
+          `<li><span>${file.name}</span><span class="small">${file.size_readable || "-"}</span></li>`
+        ).join("");
+      } catch {
+        downloadsList.innerHTML = `<li><span class="small status-error">Failed to load downloads</span></li>`;
+      }
+    }
+
+    fetchBtn.addEventListener("click", fetchInfo);
+    downloadBtn.addEventListener("click", startDownload);
+    directDownloadBtn.addEventListener("click", startDirectDownload);
+    urlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") fetchInfo();
+    });
+
+    refreshDownloads();
+  </script>
+</body>
+</html>
